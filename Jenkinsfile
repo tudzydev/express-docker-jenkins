@@ -22,10 +22,13 @@ pipeline {
 
         // Stage 2: ติดตั้ง dependencies และรันเทสต์
         stage('Install & Test') {
+            environment {
+                PATH = "/opt/homebrew/bin:$PATH"
+            }
             steps {
                 sh '''
-                    /opt/homebrew/bin/npm install
-                    /opt/homebrew/bin/npm test
+                    npm install
+                    npm test
                 '''
             }
         }
