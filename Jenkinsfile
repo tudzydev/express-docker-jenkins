@@ -22,6 +22,12 @@ pipeline {
 
         // Stage 2: ติดตั้ง dependencies และรันเทสต์
         stage('Install & Test') {
+            agent {
+                docker {
+                    image 'node:22-alpine'
+                    args '-u root'
+                }
+            }
             steps {
                 sh '''
                     npm install
