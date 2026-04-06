@@ -7,6 +7,7 @@ pipeline {
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub-cred'
         DOCKER_REPO               = "phoom005/express-app"
         APP_NAME                  = "express-app"
+        PATH                      = "/usr/local/bin:/opt/homebrew/bin:$PATH"
     }
 
     // กำหนด stages ของ Pipeline
@@ -23,7 +24,7 @@ pipeline {
         // Stage 2: ติดตั้ง dependencies และรันเทสต์
         stage('Install & Test') {
             environment {
-                PATH = "/opt/homebrew/bin:$PATH"
+                PATH = "/usr/local/bin:/opt/homebrew/bin:$PATH"
             }
             steps {
                 sh '''
