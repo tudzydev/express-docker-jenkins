@@ -87,14 +87,10 @@ pipeline {
         // ถ้ามี package-lock.json ให้ใช้ npm ci แทน npm install จะเร็วและล็อกเวอร์ชันชัดเจนกว่า
         stage('Install & Test') {
             steps {
-                script {
-                    docker.image('node:22-alpine').inside {
-                        sh '''
-                            if [ -f package-lock.json ]; then npm ci; else npm install; fi
-                            npm test
-                        '''
-                    }
-                }
+                sh '''
+                    echo "Running tests inside node:22-alpine container..."
+                    docker run --rm -v "$(pwd)":/app -w /app node:22-alpine sh -c "if [ -f package-lock.json ]; then npm ci; else npm install; fi && npm test"
+                '''
             }
         }
 
