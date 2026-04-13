@@ -52,7 +52,8 @@ app.get('/api/orders', (_: Request, res: Response) => {
     { id: 1, userId: 1, productId: 2, quantity: 1 },
     { id: 2, userId: 2, productId: 3, quantity: 2 },
     { id: 3, userId: 1, productId: 1, quantity: 1 },
-    { id: 4, userId: 2, productId: 4, quantity: 1 }
+    { id: 4, userId: 2, productId: 4, quantity: 1 },
+    { id: 5, userId: 3, produtId: 5, quantity: 1 }
   ]
   res.json(orders)
 })
