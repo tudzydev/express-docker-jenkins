@@ -52,8 +52,8 @@ pipeline {
     environment {
 
         // กำหนดค่า Docker Hub credentials ID ที่ตั้งค่าไว้ใน Jenkins
-       DOCKER_HUB_CREDENTIALS_ID = 'dockerhub-cred'
-       DOCKER_REPO               = "phoom005/express-app"
+        DOCKER_HUB_CREDENTIALS_ID = 'dockerhub-cred'
+        DOCKER_REPO               = "phoom005/express-app"
 
         // กำหนดค่าสำหรับจำลอง DEV environment บน Local
         DEV_APP_NAME              = "express-app-dev"
@@ -62,8 +62,7 @@ pipeline {
         // กำหนดค่าสำหรับจำลอง PROD environment บน Local
         PROD_APP_NAME             = "express-app-prod"
         PROD_HOST_PORT            = "3000"
-        // เพิ่มค่าเริ่มต้นสำหรับ IMAGE_TAG เพื่อป้องกัน null
-        IMAGE_TAG                 = ''    }
+    }
 
     // กำหนด input parameters สำหรับเลือก Action (Build & Deploy หรือ Rollback)
     // และกำหนดค่า ROLLBACK_TAG กับ ROLLBACK_TARGET เมื่อเลือก Rollback
@@ -75,29 +74,6 @@ pipeline {
 
     // กำหนด stages ของ Pipeline
     stages {
-
-        // =================================================================
-        // CHECK DOCKER STAGE: ตรวจสอบว่า Docker ใช้งานได้หรือไม่
-        // =================================================================
-        stage('Check Docker') {
-            steps {
-                script {
-                    def dockerAvailable = sh(script: 'docker --version', returnStatus: true) == 0
-                    if (!dockerAvailable) {
-                        echo "⚠️  WARNING: Docker ไม่พบ กรุณาติดตั้ง Docker Desktop และตรวจสอบ PATH"
-                        echo "🔧 วิธีแก้ไข:"
-                        echo "1. ติดตั้ง Docker Desktop จาก https://www.docker.com/products/docker-desktop"
-                        echo "2. เปิดใช้งาน Docker Desktop"
-                        echo "3. เพิ่ม /opt/homebrew/bin ไปยัง Jenkins agent PATH หรือสร้าง symlink"
-                        echo "   ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker"
-                        error "❌ Docker ไม่ได้ติดตั้งหรือไม่สามารถเข้าถึงได้"
-                    } else {
-                        sh 'docker --version'
-                        echo "✅ Docker พร้อมใช้งาน"
-                    }
-                }
-            }
-        }
 
         // =================================================================
         // BUILD STAGES: ทำงานเมื่อ ACTION คือ 'Build & Deploy'
@@ -141,7 +117,7 @@ pipeline {
             steps {
                 script {
                     def imageTag = (env.BRANCH_NAME == 'main') ? sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim() : "dev-${env.BUILD_NUMBER}"
-                    env.IMAGE_TAG = imageTag  // ตรวจสอบให้แน่ใจว่าตั้งค่าเสมอ
+                    env.IMAGE_TAG = imageTag
                     
                     // [ปรับปรุง] ใช้ docker.withRegistry() เพื่อความปลอดภัยและเรียบง่าย
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS_ID) {
@@ -263,11 +239,7 @@ pipeline {
             }
             post {
                 success { 
-                    script {
-                        def targetAppName = (params.ROLLBACK_TARGET == 'dev') ? env.DEV_APP_NAME : env.PROD_APP_NAME
-                        def targetHostPort = (params.ROLLBACK_TARGET == 'dev') ? env.DEV_HOST_PORT : env.PROD_HOST_PORT
-                        sendNotificationToN8n('success', "Rollback ${params.ROLLBACK_TARGET.toUpperCase()}", params.ROLLBACK_TAG, targetAppName, targetHostPort)
-                    }
+                    sendNotificationToN8n('success', "Rollback ${params.ROLLBACK_TARGET.toUpperCase()}", params.ROLLBACK_TAG, targetAppName, targetHostPort)
                 }
             }
         }
@@ -299,13 +271,7 @@ pipeline {
         }
         failure {
             // ส่งข้อมูลไปยัง n8n webhook เมื่อ pipeline ล้มเหลว
-            script {
-                try {
-                    sendNotificationToN8n('failed', "Pipeline Failed", env.IMAGE_TAG ?: 'N/A', 'N/A', 'N/A')
-                } catch (err) {
-                    echo "ไม่สามารถส่งการแจ้งเตือนความล้มเหลวได้: ${err}"
-                }
-            }
+            sendNotificationToN8n('failed', "Pipeline Failed", 'N/A', 'N/A', 'N/A')
         }
     }
 }
