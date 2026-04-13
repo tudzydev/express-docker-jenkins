@@ -82,11 +82,18 @@ pipeline {
         stage('Check Docker') {
             steps {
                 script {
-                    try {
+                    def dockerAvailable = sh(script: 'docker --version', returnStatus: true) == 0
+                    if (!dockerAvailable) {
+                        echo "⚠️  WARNING: Docker ไม่พบ กรุณาติดตั้ง Docker Desktop และตรวจสอบ PATH"
+                        echo "🔧 วิธีแก้ไข:"
+                        echo "1. ติดตั้ง Docker Desktop จาก https://www.docker.com/products/docker-desktop"
+                        echo "2. เปิดใช้งาน Docker Desktop"
+                        echo "3. เพิ่ม /opt/homebrew/bin ไปยัง Jenkins agent PATH หรือสร้าง symlink"
+                        echo "   ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker"
+                        error "❌ Docker ไม่ได้ติดตั้งหรือไม่สามารถเข้าถึงได้"
+                    } else {
                         sh 'docker --version'
-                        echo "Docker พร้อมใช้งานแล้ว"
-                    } catch (err) {
-                        error "Docker ไม่ได้ติดตั้งหรือไม่สามารถเข้าถึงได้บน agent นี้ กรุณาติดตั้ง Docker และตรวจสอบว่าเปิดใช้งานอยู่"
+                        echo "✅ Docker พร้อมใช้งาน"
                     }
                 }
             }
