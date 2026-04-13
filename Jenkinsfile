@@ -62,7 +62,8 @@ pipeline {
         // กำหนดค่าสำหรับจำลอง PROD environment บน Local
         PROD_APP_NAME             = "express-app-prod"
         PROD_HOST_PORT            = "3000"
-    }
+        // เพิ่มค่าเริ่มต้นสำหรับ IMAGE_TAG เพื่อป้องกัน null
+        IMAGE_TAG                 = ''    }
 
     // กำหนด input parameters สำหรับเลือก Action (Build & Deploy หรือ Rollback)
     // และกำหนดค่า ROLLBACK_TAG กับ ROLLBACK_TARGET เมื่อเลือก Rollback
@@ -74,6 +75,22 @@ pipeline {
 
     // กำหนด stages ของ Pipeline
     stages {
+
+        // =================================================================
+        // CHECK DOCKER STAGE: ตรวจสอบว่า Docker ใช้งานได้หรือไม่
+        // =================================================================
+        stage('Check Docker') {
+            steps {
+                script {
+                    try {
+                        sh 'docker --version'
+                        echo "Docker พร้อมใช้งานแล้ว"
+                    } catch (err) {
+                        error "Docker ไม่ได้ติดตั้งหรือไม่สามารถเข้าถึงได้บน agent นี้ กรุณาติดตั้ง Docker และตรวจสอบว่าเปิดใช้งานอยู่"
+                    }
+                }
+            }
+        }
 
         // =================================================================
         // BUILD STAGES: ทำงานเมื่อ ACTION คือ 'Build & Deploy'
@@ -117,7 +134,7 @@ pipeline {
             steps {
                 script {
                     def imageTag = (env.BRANCH_NAME == 'main') ? sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim() : "dev-${env.BUILD_NUMBER}"
-                    env.IMAGE_TAG = imageTag
+                    env.IMAGE_TAG = imageTag  // ตรวจสอบให้แน่ใจว่าตั้งค่าเสมอ
                     
                     // [ปรับปรุง] ใช้ docker.withRegistry() เพื่อความปลอดภัยและเรียบง่าย
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS_ID) {
@@ -239,7 +256,11 @@ pipeline {
             }
             post {
                 success { 
-                    sendNotificationToN8n('success', "Rollback ${params.ROLLBACK_TARGET.toUpperCase()}", params.ROLLBACK_TAG, targetAppName, targetHostPort)
+                    script {
+                        def targetAppName = (params.ROLLBACK_TARGET == 'dev') ? env.DEV_APP_NAME : env.PROD_APP_NAME
+                        def targetHostPort = (params.ROLLBACK_TARGET == 'dev') ? env.DEV_HOST_PORT : env.PROD_HOST_PORT
+                        sendNotificationToN8n('success', "Rollback ${params.ROLLBACK_TARGET.toUpperCase()}", params.ROLLBACK_TAG, targetAppName, targetHostPort)
+                    }
                 }
             }
         }
@@ -271,7 +292,13 @@ pipeline {
         }
         failure {
             // ส่งข้อมูลไปยัง n8n webhook เมื่อ pipeline ล้มเหลว
-            sendNotificationToN8n('failed', "Pipeline Failed", 'N/A', 'N/A', 'N/A')
+            script {
+                try {
+                    sendNotificationToN8n('failed', "Pipeline Failed", env.IMAGE_TAG ?: 'N/A', 'N/A', 'N/A')
+                } catch (err) {
+                    echo "ไม่สามารถส่งการแจ้งเตือนความล้มเหลวได้: ${err}"
+                }
+            }
         }
     }
 }
